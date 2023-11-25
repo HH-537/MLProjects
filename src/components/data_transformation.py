@@ -16,23 +16,24 @@ from src.utils import save_object
 @dataclass
 class DataTransformationConfig:
     preprocessor_obj_path = os.path.join('artifacts', 'preprocessor.pkl')
-    logging.INFO('Assigned Preprocessor Path')
+    logging.info('Assigned Preprocessor Path')
 
 
 class DataTransformation:
     def __init__(self):
         self.data_transformation_config = DataTransformationConfig()
-        logging.INFO('Create Data transformation config')
+        logging.info('Create Data transformation config')
 
-    def construct_preprocessor(self):
+    @staticmethod
+    def construct_preprocessor():
         try:
-            numeric_cols = ["writing_score", "reading_score"]
+            numeric_cols = ["writing score", "reading score"]
             categorical_cols = [
                 "gender",
-                "race_ethnicity",
-                "parental_level_of_education",
+                "race/ethnicity",
+                "parental level of education",
                 "lunch",
-                "test_preparation_course",
+                "test preparation course",
             ]
 
             numeric_pipeline = Pipeline(
@@ -42,15 +43,16 @@ class DataTransformation:
             )
 
             categoric_pipeline = Pipeline(
-                steps=[('OneHotEncoder', OneHotEncoder()),
-                       ('Scaler', StandardScaler())]
+                steps=[('imputer', SimpleImputer(strategy="most_frequent")),
+                       ('OneHotEncoder', OneHotEncoder()),
+                       ('Scaler', StandardScaler(with_mean=False))]
             )
 
             preprocessor = ColumnTransformer(
                 [('NumericPipeline', numeric_pipeline, numeric_cols),
                  ('CategoricPipeline', categoric_pipeline, categorical_cols)]
             )
-            logging.INFO('Defined Pipeline and Preprocessor')
+            logging.info('Defined Pipeline and Preprocessor')
             return preprocessor
         except Exception as e:
             raise CustomException(e, sys)
@@ -58,14 +60,14 @@ class DataTransformation:
     def initiate_data_transformation(self, train_path, test_path):
         try:
             preprocessor = self.construct_preprocessor()
-            logging.INFO('Created Preprocessor Instance')
+            logging.info('Created Preprocessor Instance')
             train_df = pd.read_csv(train_path)
             test_df = pd.read_csv(test_path)
-            logging.INFO('Read Train/Test Files')
-            target_feat = 'math_score'
-            train_input_df = train_df.drop(cols=[target_feat], axis=1)
+            logging.info('Read Train/Test Files')
+            target_feat = 'math score'
+            train_input_df = train_df.drop(columns=[target_feat], axis=1)
             train_target_df = train_df[target_feat]
-            test_input_df = test_df.drop(cols=[target_feat], axis=1)
+            test_input_df = test_df.drop(columns=[target_feat], axis=1)
             test_target_df = test_df[target_feat]
 
             train_input_arr = preprocessor.fit_transform(train_input_df)
@@ -73,13 +75,13 @@ class DataTransformation:
 
             train_arr = np.c_[train_input_arr, np.array(train_target_df)]
             test_arr = np.c_[test_input_arr, np.array(test_target_df)]
-            logging.INFO('Transformed Train/Test Data')
+            logging.info('Transformed Train/Test Data')
 
             save_object(
                 file_path=self.data_transformation_config.preprocessor_obj_path,
                 obj=preprocessor
             )
-            logging.INFO('Saved Preprocessor Object and Path')
-            return train_arr, test_arr, self.data_transformation_config.preprocessor_obj_file_path,
+            logging.info('Saved Preprocessor Object and Path')
+            return train_arr, test_arr, self.data_transformation_config.preprocessor_obj_path,
         except Exception as e:
             raise CustomException(e, sys)
